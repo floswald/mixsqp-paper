@@ -1,7 +1,7 @@
 # mixopt
 
 Algorithms for solving the "mixture distribution" optimization
-problem. See [here](https://stephenslab.github.io/mixopt) for an
+problem. See [here](https://stephenslab.github.io/mixopt) for an 
 overview of the problem and results of our experiments.
 
 ## License
