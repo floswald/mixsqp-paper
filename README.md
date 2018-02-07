@@ -7,7 +7,7 @@ overview of the problem and results of our experiments.
 ## License
 
 All source code and software in this repository are made available
-under the terms of the
+under the terms of the 
 [MIT license](https://opensource.org/licenses/mit-license.html).
 
 ## Quick Start
