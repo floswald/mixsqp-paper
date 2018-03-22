@@ -1,8 +1,11 @@
 # TO DO: Add brief description of function and input arguments here.
-function mixEM(L; w = ones(size(L,2))/size(L,2), maxiter = 10000, tol = 1e-6, eps = 1e-8)
+function mixem(L::Array{Float64,2},
+               w::Array{Float64,1} = ones(size(L,2))/size(L,2);
+               maxiter::Int = 1000, tol::Float64 = 1e-6,
+               eps::Float64 = eps(), verbose::Bool = true)
 
-  # Get the number of rows (n) and columns (k) of the conditional
-  # likelihood matrix.
+  # Get the number of rows (n) and columns (k) of the likelihood
+  # matrix.
   n = size(L,1);
   k = size(L,2);
 
