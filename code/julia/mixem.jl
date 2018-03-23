@@ -1,6 +1,5 @@
 # TO DO:
 #  - Add brief description of function and input arguments here.
-#  - Improve memory allocation of E and M steps.
 function mixem(L::Array{Float64,2},
                x::Array{Float64,1} = ones(size(L,2))/size(L,2);
                maxiter::Int = 1000, tol::Float64 = 1e-4,
@@ -92,8 +91,8 @@ function mixem(L::Array{Float64,2},
       @printf "%4d %0.8e %0.2e\n" i f[i] d[i]
     end
     if d[i] < tol
-      status = @sprintf("Converged after %d iterations (tolerance = %0.2e).",
-                        i,tol);
+      status =
+        @sprintf("Converged after %d iterations (tolerance = %0.2e).",i,tol);
       break
     end
   end
@@ -102,7 +101,8 @@ function mixem(L::Array{Float64,2},
     @printf "\n"
   end
     
-  # Return the solution (x), the objective value at each iteration
-  # (f), and the maximum change in the solution at each iteration (d).
+  # Return the solution (x), the convergence status (status), the
+  # objective value at each iteration (f), and the maximum change in
+  # the solution at each iteration (d).
   return x, status, f[1:i], d[1:i]
 end        
