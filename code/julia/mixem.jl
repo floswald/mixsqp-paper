@@ -67,9 +67,10 @@ function mixem(L::Array{Float64,2},
     #   z = sum(P,2) + eps;
     #   P = P ./ z;
     #  
-    # Surprisingly, this simple code works because the multiplication
-    # and division operations are automatically "broadcasted" across
-    # rows or columns.
+    # Surprisingly, the above simple code works because the
+    # elementwise multiplication (.*) and elementwise division (./)
+    # operations are automatically "broadcasted" across rows or
+    # columns.
     broadcast!(*,P,x',L);
     z = sum(P,2) + eps;
     broadcast!(/,P,P,z);
