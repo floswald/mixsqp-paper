@@ -57,15 +57,16 @@ function mixem(L::Array{Float64,2},
     # as
     #
     #   P = L * diagm(x)
-    #   P = P ./ repmat(sum(P,2) + eps,1,k);
+    #   P = P ./ repmat(sum(P,2) + eps,1,k)
     #
     # but substantially more efficient in terms of execution speed and
-    # memory allocations. An alternative code that is also fast but
-    # perhaps more readable that the code below is this:
+    # memory allocations (about 2.5x faster and 10x reduction in
+    # allocations). An alternative code that is also fast but perhaps
+    # more readable that the code below is this:
     # 
-    #   P = x' .* L;
-    #   z = sum(P,2) + eps;
-    #   P = P ./ z;
+    #   P = x' .* L
+    #   z = sum(P,2) + eps
+    #   P = P ./ z
     #  
     # Surprisingly, the above simple code works because the
     # elementwise multiplication (.*) and elementwise division (./)
