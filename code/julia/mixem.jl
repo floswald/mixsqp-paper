@@ -1,5 +1,12 @@
-# TO DO:
-#  - Add brief description of function and input arguments here.
+# Fit a mixture model using EM. Input argument L is the n x k
+# likelihood matrix, where n is the number of samples and k is the
+# number of mixture components; optional input argument x is the
+# initial estimate of the mixture weights. This function has four
+# return values (x, status, f, d): a vector containing the best
+# solution estimate (x); a character string with the convergence
+# status (status); a vector storing the objective value at each
+# iteration (f); and a vector storing the maximum change in the
+# solution at each iteration (d).
 function mixem(L::Array{Float64,2},
                x::Array{Float64,1} = ones(size(L,2))/size(L,2);
                maxiter::Int = 1000, tol::Float64 = 1e-4,
