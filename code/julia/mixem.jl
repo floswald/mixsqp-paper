@@ -1,4 +1,6 @@
-# TO DO: Add brief description of function and input arguments here.
+# TO DO:
+#  - Add brief description of function and input arguments here.
+#  - Improve memory allocation of E and M steps.
 function mixem(L::Array{Float64,2},
                x::Array{Float64,1} = ones(size(L,2))/size(L,2);
                maxiter::Int = 1000, tol::Float64 = 1e-4,
@@ -31,7 +33,12 @@ function mixem(L::Array{Float64,2},
     
   # Compute the objective function value at the initial iterate.
   f[i] = -sum(log.(L*x + eps));
-  
+
+  # Preallocate memory for the posterior probabilities and other
+  # quantities.
+  P  = zeros(n,k);
+  x0 = copy(x);
+        
   # Print the column labels for reporting the algorithm's progress.
   if verbose
     @printf "iter      objective    delta\n"
@@ -47,12 +54,13 @@ function mixem(L::Array{Float64,2},
     # E STEP
     # Compute the posterior probabilities.
     P = L * spdiagm(x);
-    P = P ./ repmat(sum(P,2) + eps,1,k);
-
+    P ./= repmat(sum(P,2) + eps,1,k);
+      
     # M STEP
+    # ------
     # Update the mixture weights.
-    x = mean(P,1)'[:];
-    
+    x = mean(P,1)[:];  
+
     # Compute the value of the objective at x.
     f[i] = -sum(log.(L*x + eps));
       
