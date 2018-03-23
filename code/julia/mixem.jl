@@ -37,8 +37,9 @@ function mixem(L::Array{Float64,2},
   # Preallocate memory for the posterior probabilities and other
   # quantities.
   P  = zeros(n,k);
-  x0 = copy(x);
-        
+  x0 = zeros(k);
+  z  = zeros(n);
+    
   # Print the column labels for reporting the algorithm's progress.
   if verbose
     @printf "iter      objective    delta\n"
@@ -52,14 +53,32 @@ function mixem(L::Array{Float64,2},
     x0 = x;
 
     # E STEP
-    # Compute the posterior probabilities.
-    P = L * spdiagm(x);
-    P ./= repmat(sum(P,2) + eps,1,k);
+    # ------
+    # Compute the posterior probabilities. Note this code is the same
+    # as
+    #
+    #   P = L * diagm(x)
+    #   P = P ./ repmat(sum(P,2) + eps,1,k);
+    #
+    # but substantially more efficient in terms of execution speed and
+    # memory allocations. An alternative code that is also fast but
+    # perhaps more readable that the code below is this:
+    # 
+    #   P = x' .* L;
+    #   z = sum(P,2) + eps;
+    #   P = P ./ z;
+    #  
+    # Surprisingly, this simple code works because the multiplication
+    # and division operations are automatically "broadcasted" across
+    # rows or columns.
+    broadcast!(*,P,x',L);
+    z = sum(P,2) + eps;
+    broadcast!(/,P,P,z);
       
     # M STEP
     # ------
     # Update the mixture weights.
-    x = mean(P,1)[:];  
+    x = mean(P,1)[:];
 
     # Compute the value of the objective at x.
     f[i] = -sum(log.(L*x + eps));
