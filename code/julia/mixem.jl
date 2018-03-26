@@ -38,7 +38,7 @@ function mixem(L::Array{Float64,2},
     @sprintf("reached maximum number of iterations (%d).",maxiter);
     
   # Compute the objective function value at the initial iterate.
-  f[i] = -sum(log.(L*x + eps));
+  f[i] = mixobjective(L,x,eps);
 
   # Preallocate memory for the posterior probabilities and other
   # quantities.
@@ -89,7 +89,7 @@ function mixem(L::Array{Float64,2},
     x = mean(P,1)[:];
 
     # Compute the value of the objective at x.
-    f[i] = -sum(log.(L*x + eps));
+    f[i] = mixobjective(L,x,eps);
       
     # Print the status of the algorithm and check the convergence
     # criterion. Convergence is reached when the maximum difference
