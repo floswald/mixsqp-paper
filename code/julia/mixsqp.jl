@@ -9,7 +9,55 @@ function reconstructmatrixsvd(F::LowRankApprox.PartialSVD{Float64,Float64},
                               S::Diagonal{Float64})
   return F[:U] * S * F[:Vt]
 end
+
+# Compute the gradient and Hessian of the (primal) objective. Note
+# that it is important to avoid takine the transpose of the
+# (potentially large) matrix L; for example, for computing the
+# gradient, the equivalent code g = -L'*d/n is slower and requires
+# more memory allocations.
+function computegradient!(L::Array{Float64,2}, g::Array{Float64,1},
+                          H::Array{Float64,2}, d::Array{Float64,1},
+                          I::Array{Float64,2}, eps::Float64)
+  n  = nrow(L);
+  d  = 1./(L*x + eps);
+  g  = -(d'*L)'/n;
+  H  = I;
+  H += L'*Diagonal(d.^2)*L/n;
+  return 0
+end
+
+# This function implements the main loop of mixsqp.
+function mixsqploop!(L::Array{Float64,2}, x::Array{Float64,1},
+                     maxiter::Int, eps::Float64, verbose::Bool)
+
+  # Get the number of rows (n) and columns (k) of the likelihood
+  # matrix.
+  n = nrow(L);
+  k = ncol(L);
     
+  # Initialize loop variables used in the loop below so that they are
+  # available outside the scope of the loop.
+  i = 0;
+
+  # Preallocate memory for additional quantities computed inside the
+  # loop.
+  g = zeros(k);
+  d = zeros(k);
+  H = zeros(k,k);
+  I = zeros(k,k);
+    
+  # Repeat until we reach the maximum number if iterations, or until
+  # the convergence criterion is met.
+  for i = 1:maxiter
+
+    # COMPUTE GRADIENT AND HESSIAN
+    # ----------------------------
+    computegradient!(L,g,H,d,I,eps);
+  end
+
+  return x;
+end
+
 # TO DO: Add comments here explaining what this function does, and
 # what are the inputs and outputs.
 #
@@ -60,11 +108,11 @@ function mixsqp(L::Array{Float64,2},
     @printf "Running SQP algorithm with the following settings:\n"
     @printf " - %d x %d data matrix\n" n k
     if lowrankapprox == "qr"
-      @printf " - Using SVD approximation "
-      @printf "with %0.2e error tolerance\n" factol
+      @printf " - Using SVD approximation with "
+      @printf "%0.2e error tolerance\n" factol
     elseif lowrankapprox == "svd"
-      @printf " - Using QR approximation "
-      @printf "with %0.2e error tolerance\n" factol
+      @printf " - Using QR approximation with "
+      @printf "%0.2e error tolerance\n" factol
     end
     @printf " - maximum number of iterations = %d\n" maxiter
   end
@@ -74,7 +122,7 @@ function mixsqp(L::Array{Float64,2},
   # If requested, compute a partial QR or partial SVD factorization of
   # the likelihood matrix using the LowRankApprox package. For
   # details, see https://github.com/klho/LowRankApprox.jl.
-  out, facelapsed, facbytes, gctime,
+  out, fac_elapsed, fac_bytes, gctime,
   memallocs = @timed if lowrankapprox == "qr"
     if verbose
       @printf "Computing partial QR factorization.\n"
@@ -92,7 +140,7 @@ function mixsqp(L::Array{Float64,2},
   # Report accuracy and computational expense of factorization.
   if verbose
     @printf(" - Factorization took %0.4f seconds (allocation: %0.2f MiB)\n",
-            facelapsed,facbytes/1024^2);
+            fac_elapsed,fac_bytes/1024^2);
     if lowrankapprox != "none"
       if lowrankapprox == "qr"
         @printf(" - Min. value in partial QR approx. = %0.2e\n",
@@ -108,7 +156,17 @@ function mixsqp(L::Array{Float64,2},
     end
   end
 
-  return 0
+  # RUN SQP ALGORITHM
+  # -----------------
+  if verbose
+    @printf "Running SQP algorithm.\n"
+  end
+  x, loop_elapsed, loop_bytes, gctime,
+  memallocs = @timed mixsqploop!(L,x,maxiter,eps,verbose);
+  @printf(" - Optimization took %0.4f seconds (allocation: %0.2f MiB)\n",
+            loop_elapsed,loop_bytes/1024^2);
+
+  return x
 end
 
 ##   # Initialize storage for the outputs obj, gmin, nnz and nqp.
@@ -118,9 +176,6 @@ end
 ##   nqp    = zeros(maxiter);
 ##   timing = zeros(maxiter);
     
-##   # Initialize loop variables used in the loops below so that they
-##   # are available outside the scope of the loop.
-##   i = 0;
 ##   j = 0;
 ##   D = 0;
 
