@@ -31,4 +31,4 @@ println(status);
 # Fit the mixture model by solving the dual problem using an
 # interior-point method.
 @printf "Fitting mixture model using REBayes.\n"
-@time xreb, freb = REBayes(L);
+@time xreb, freb = mix_rebayes(L);

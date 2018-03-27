@@ -1,5 +1,8 @@
-# TO DO: Explain here what this function does, and how to use it.
-function REBayes(L::Array{Float64,2}, eps::Float64 = 1e-15)
+# Fit a mixture model by solving the dual optimization problem using
+# the MOSEK interior-point solver. Input argument L is the n x k
+# likelihood matrix, where n is the number of samples and k is the
+# number of mixture components.
+function mix_rebayes(L::Array{Float64,2}, eps::Float64 = 1e-15)
 
   # Check input matrix "L". All the entries should be positive.
   if any(L .<= 0)
@@ -16,12 +19,13 @@ function REBayes(L::Array{Float64,2}, eps::Float64 = 1e-15)
   x <- REBayes::KWDual(L,rep(1,k),rep(1,n)/n)$f
   """
 
-  # Make sure all the entries are positive, and re-normalized as needed.
+  # Make sure all the entries are positive, and re-normalize as needed.
   @rget x;
-  x[x .<  0] = 0;
+  x[x .< 0] = 0;
   x = x/sum(x); 
     
   # Return the REBayes solution, and the value of the objective at the
   # solution.
-  return x, mixobjective(L,x,eps)
+  f = mixobjective(L,x,eps);
+  return x, f
 end
