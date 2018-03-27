@@ -8,7 +8,7 @@
 # iteration (f); and a vector storing the maximum change in the
 # solution at each iteration (d).
 function mixem(L::Array{Float64,2},
-               x::Array{Float64,1} = ones(size(L,2))/size(L,2);
+               x::Array{Float64,1} = ones(ncol(L))/ncol(L);
                maxiter::Int = 1000, tol::Float64 = 1e-4,
                eps::Float64 = 1e-15, verbose::Bool = false)
 
