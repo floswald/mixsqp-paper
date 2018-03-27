@@ -14,17 +14,21 @@ function mixem(L::Array{Float64,2},
 
   # Get the number of rows (n) and columns (k) of the likelihood
   # matrix.
-  n = size(L,1);
-  k = size(L,2);
+  n = nrow(L);
+  k = ncol(L);
 
   # Check input matrix "L". All the entries should be positive.
   if any(L .<= 0)
-    throw(ArgumentError("All entries of matrix \"L\" should be positive"))
+    throw(ArgumentError("All entries of matrix \"L\" should be positive"));
   end
 
   # Check input vector "x", and normalize so that the entries sum to 1.
   if any(x .<= 0)
-    throw(ArgumentError("All entries of vector \"w\" should be positive"))
+    throw(ArgumentError("All entries of vector \"w\" should be positive"));
+  end
+  if (length(x) != k)
+    throw(ArgumentError("Input vector \"x\" should have one entry for " *
+                        "each column of L"));
   end
   x = x/sum(x);
 

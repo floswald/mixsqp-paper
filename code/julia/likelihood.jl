@@ -13,19 +13,19 @@ function autoselectmixsd(x::Array{Float64,1},
   # Check input "s"---it should be the same length.
   if length(s) != n
     throw(ArgumentError("Arguments \"x\" and \"s\" should have the same" *
-                        "length"))
+                        "length"));
   elseif any(s .<= 0)
-    throw(ArgumentError("All elements of \"s\" should be positive"))
+    throw(ArgumentError("All elements of \"s\" should be positive"));
   end
       
   # Check input "gridmult".
   if gridmult < 0
-    throw(ArgumentError("Input \"gridmult\" should be non-negative"))
+    throw(ArgumentError("Input \"gridmult\" should be non-negative"));
   end
 
   # Check input "nv".
   if !(nv == 0 || nv > 1)
-    throw(ArgumentError("Input \"nv\" should be 0, or greater than 1"))
+    throw(ArgumentError("Input \"nv\" should be 0, or greater than 1"));
   end
     
   # Determine the minimum and maximum sigma settings.
@@ -76,14 +76,14 @@ function normlikmatrix(x::Array{Float64,1},
   # Check input "s"---it should be the same length
   if length(s) != n
     throw(ArgumentError("Arguments \"x\" and \"s\" should have the same" *
-                        "length"))
+                        "length"));
   elseif any(s .<= 0)
-    throw(ArgumentError("All elements of \"s\" should be positive"))
+    throw(ArgumentError("All elements of \"s\" should be positive"));
   end
 
   # Check input "sd".
   if any(sd .< 0)
-    throw(ArgumentError("All elements of \"sd\" should be non-negative"))
+    throw(ArgumentError("All elements of \"sd\" should be non-negative"));
   end
     
   # Compute the n x k matrix of standard deviations.

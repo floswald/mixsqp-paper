@@ -7,7 +7,7 @@ function normdatasim(n::Int)
 
   # Check input "n".
   if n <= 0
-    throw(ArgumentError("Argument \"n\" should be positive"))
+    throw(ArgumentError("Argument \"n\" should be positive"));
   end
 
   # Generate the random numbers.
@@ -25,7 +25,7 @@ function normtmixdatasim(n::Int)
   
   # Check input "n".
   if n <= 0
-    throw(ArgumentError("Argument \"n\" should be positive"))
+    throw(ArgumentError("Argument \"n\" should be positive"));
   end
 
   # Generate the random numbers.

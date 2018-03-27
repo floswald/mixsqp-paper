@@ -1,3 +1,5 @@
+compute
+
 # TO DO: Add comments here explaining what this function does, and
 # what are the inputs and outputs.
 #
@@ -5,32 +7,42 @@
 # x       : initial point with default (1/m, 1/m, ...)
 # convtol :
 # 
-function mixSQP(L; x = ones(size(L,2))/size(L,2), convtol = 1e-8,
-                pqrtol = 1e-8, eps = 1e-8, sptol = 1e-3,
-                maxiter = 100, maxqpiter = 100,
-                lowrank = "svd", seed = 1, verbose = true)
-    
-  # Get the number of rows (n) and columns (k) of L
-  n = size(L,1); k = size(L,2);
+function mixsqp(L::Array{Float64,2},
+                x::Array{Float64,1} = ones(size(L,2))/size(L,2);
+                lowrankapprox = "svd", maxiter::Int = 1000,
+                factortol::Float64 = 1e-15, eps::Float64 = 1e-15,
+                verbose::Bool = true)
 
-  # If requested (i.e., if pqrtol > 0), compute the partial QR
-  # decomposition with relative precision "tol", then retrieve the
-  # permutation matrix, P. For details on the partial QR, see
-  # https://github.com/klho/LowRankApprox.jl.
+                #, convtol = 1e-8,
+                #pqrtol = 1e-8, sptol = 1e-3,
+                # maxqpiter = 100)
     
-  # start timing for low-rank approximation of L
-  tic();
-  if lowrank == "qr"
-      srand(seed)
-      F = pqrfact(L, rtol=pqrtol);
-      P = sparse(F[:P]);
-  elseif lowrank == "svd"
-      srand(seed)
-      F = psvdfact(L, rtol=pqrtol);
-      S = Diagonal(F[:S]);
-  else
+  # Get the number of rows (n) and columns (k) of the likelihood
+  # matrix.
+  n = nrow(L);
+  k = ncol(L);
+
+  # Check input matrix "L". All the entries should be positive.
+  if any(L .<= 0)
+    throw(ArgumentError("All entries of matrix \"L\" should be positive"));
   end
-  lowranktime = toq();
+
+  # Check input vector "x", and normalize so that the entries sum to 1.
+  if any(x .<= 0)
+    throw(ArgumentError("All entries of vector \"w\" should be positive"));
+  end
+  if (length(x) != k)
+    throw(ArgumentError("Input vector \"x\" should have one entry for " *
+                        "each column of L"));
+  end
+  x = x/sum(x);
+
+  # Check input argument "lowrankapprox".
+  if (!(lowrankapprox == "qr" ||
+        lowrankapprox == "svd" ||
+        lowrankapprox == "none"))
+    throw(ArgumentError("Argument \"lowrankapprox\" should be \"qr\", " *
+                        "\"svd\" or \"none\""));
     
   # Summarize the analysis here.
   if verbose
@@ -50,7 +62,26 @@ function mixSQP(L; x = ones(size(L,2))/size(L,2), convtol = 1e-8,
       @printf("- Exact derivative computation (partial QR not used).\n")
     end
   end
+    
+  # COMPUTE PARTIAL FACTORIZATION OF LIKELIHOOD MATRIX
+  # --------------------------------------------------
+  # If requested, compute a partial QR or partial SVD factorization of
+  # the likelihood matrix using the LowRankApprox package. For
+  # details, see https://github.com/klho/LowRankApprox.jl.
+  @time if lowrankapprox == "qr"
+    F = pqrfact(L,rtol = factortol);
+    P = sparse(F[:P]);
+  elseif lowrankapprox == "svd"
+    F = psvdfact(L,rtol = factortol);
+    S = Diagonal(F[:S]);
+  end
 
+  # TO DO: Report accuracy of factorization.
+  if verbose
+  end
+      
+  return 0
+    
   # Initialize storage for the outputs obj, gmin, nnz and nqp.
   obj    = zeros(maxiter);
   gmin   = zeros(maxiter);

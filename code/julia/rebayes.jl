@@ -6,7 +6,7 @@ function mix_rebayes(L::Array{Float64,2}, eps::Float64 = 1e-15)
 
   # Check input matrix "L". All the entries should be positive.
   if any(L .<= 0)
-    throw(ArgumentError("All entries of matrix \"L\" should be positive"))
+    throw(ArgumentError("All entries of matrix \"L\" should be positive"));
   end
     
   # Copy the likelihood matrix to the R environment.
