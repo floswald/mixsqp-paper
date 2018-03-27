@@ -2,8 +2,6 @@ function mixSQP_time(L; eps=1e-8, tol=1e-8, pqrtol = 1e-10, sptol=1e-3,
                      lowrank = "svd")
 
   iter = 100;
-  # initialize
-  x = zeros(k); x[1] = 1/2; x[k] = 1/2;
 
   tic();
   # QP subproblem start
