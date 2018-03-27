@@ -1,28 +1,44 @@
 # Reconstruct the matrix from the partial QR decomposition.
 function reconstructmatrixqr(F::LowRankApprox.PartialQR{Float64},
                              P::SparseMatrixCSC{Float64,Int})
-  return F[:Q] * F[:R] * P'
+  return F[:Q] * (F[:R] * P')
 end
 
 # Reconstruct the matrix from the partial SVD factorization.
 function reconstructmatrixsvd(F::LowRankApprox.PartialSVD{Float64,Float64},
                               S::Diagonal{Float64})
-  return F[:U] * S * F[:Vt]
+  return F[:U] * (S * F[:Vt])
 end
 
 # Compute the gradient and Hessian of the (primal) objective. Note
-# that it is important to avoid takine the transpose of the
+# that it is important to avoid taking the transpose of the
 # (potentially large) matrix L; for example, for computing the
 # gradient, the equivalent code g = -L'*d/n is slower and requires
 # more memory allocations.
-function computegradient!(L::Array{Float64,2}, g::Array{Float64,1},
-                          H::Array{Float64,2}, d::Array{Float64,1},
-                          I::Array{Float64,2}, eps::Float64)
-  n  = nrow(L);
-  d  = 1./(L*x + eps);
-  g  = -(d'*L)'/n;
-  H  = I;
-  H += L'*Diagonal(d.^2)*L/n;
+function computegradient!(L::Array{Float64,2}, x::Array{Float64,1},
+                          g::Array{Float64,1}, H::Array{Float64,2},
+                          d::Array{Float64,1}, I::Array{Float64,2}, 
+                          LD::Array{Float64,2}, eps::Float64)
+  n = nrow(L);
+  k = ncol(L);
+  d = 1./(L*x + eps);
+  I = eps*eye(k);
+    
+  # Compute the gradient of the objective. The equivalent (but slower
+  # and more memory-intensive) Julia code is g = -L'*d/n.
+  g = -(d'*L)'/n;
+
+  # Compute the Hessian of the objective. The equivalent (but slower
+  # and more memory-intensive) Julia code is
+  #
+  # H = L'*Diagonal(d.^2)*L/n + I
+  #
+  H = I;
+  d = d.^2;
+  transpose!(LD,L);
+  broadcast!(*,LD,d',LD);
+  H += (LD*L)/n;
+    
   return 0
 end
 
@@ -41,10 +57,11 @@ function mixsqploop!(L::Array{Float64,2}, x::Array{Float64,1},
 
   # Preallocate memory for additional quantities computed inside the
   # loop.
-  g = zeros(k);
-  d = zeros(k);
-  H = zeros(k,k);
-  I = zeros(k,k);
+  g  = zeros(k);
+  d  = zeros(k);
+  H  = zeros(k,k);
+  I  = zeros(k,k);
+  LD = zeros(k,n);
     
   # Repeat until we reach the maximum number if iterations, or until
   # the convergence criterion is met.
@@ -52,7 +69,7 @@ function mixsqploop!(L::Array{Float64,2}, x::Array{Float64,1},
 
     # COMPUTE GRADIENT AND HESSIAN
     # ----------------------------
-    computegradient!(L,g,H,d,I,eps);
+    computegradient!(L,x,g,H,d,I,LD,eps);
   end
 
   return x;
