@@ -10,6 +10,7 @@ include("misc.jl");
 include("datasim.jl");
 include("likelihood.jl");
 include("mixem.jl");
+include("mixsqp.jl");
 include("rebayes.jl");
 
 # Initialize the pseudorandom number generator.
@@ -32,3 +33,7 @@ println(status);
 # interior-point method.
 @printf "Fitting mixture model using REBayes.\n"
 @time xreb, freb = mix_rebayes(L);
+
+# Fit the mixture model using the SQP algorithm.
+@printf "Fitting mixture model using mixSQP.\n"
+# TO DO.
