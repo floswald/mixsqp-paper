@@ -1,16 +1,6 @@
-function mixSQP_time(L; eps=1e-8, tol=1e-8, pqrtol = 1e-10, sptol=1e-3, lowrank = "svd")
-  n = size(L,1); k = size(L,2);
-  tic();
-  if lowrank == "qr"
-      F = pqrfact(L, rtol=pqrtol);
-      P = sparse(F[:P]);
-  elseif lowrank == "svd"
-      F = psvdfact(L, rtol=pqrtol);
-      S = Diagonal(F[:S]);
-  else
-  end
-  t = toq();
-    
+function mixSQP_time(L; eps=1e-8, tol=1e-8, pqrtol = 1e-10, sptol=1e-3,
+                     lowrank = "svd")
+
   iter = 100;
   # initialize
   x = zeros(k); x[1] = 1/2; x[k] = 1/2;
