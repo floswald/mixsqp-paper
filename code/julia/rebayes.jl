@@ -6,7 +6,7 @@ function mix_rebayes(L::Array{Float64,2}, eps::Float64 = 1e-15)
 
   # Check input matrix "L". All the entries should be positive, and it
   # should have at least 2 columns.
-  if (k < 2)
+  if (ncol(L) < 2)
     throw(ArgumentError("Argument \"L\" should have at least 2 columns"));
   end
   if any(L .<= 0)

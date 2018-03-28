@@ -8,10 +8,12 @@ include("mixem.jl");
 include("rebayes.jl");
 include("mixSQP_old.jl");
 
-e = 0.01;
+# Construct the likelihood matrix.
+e = 0.5;
 L = [ 1.0   e   e
-      1.0 1.0 1.0
-      1.0 1.0 1.0 ];
+        e 1.0   e
+        e   e 0.9 ];
+display(L);
 
 srand(1);
 
@@ -28,3 +30,11 @@ println(status);
 # Fit the mixture model using the SQP algorithm.
 @printf "Fitting mixture model using mixSQP.\n"
 @time out = mixSQP(L,lowrank = "nothing");
+xsqp = out["x"];
+fsqp = mixobjective(L,xsqp,1e-15);
+
+# Compare the solutions:
+@printf "REBayes, EM and SQP solutions:\n"
+display([xreb xem xsqp]);
+@printf "Objective value at REBayes, EM and SQP solutions:\n"
+display(tuple(freb,minimum(fem),fsqp));
