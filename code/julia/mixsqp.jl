@@ -11,8 +11,7 @@ function reconstructmatrixsvd(F::LowRankApprox.PartialSVD{Float64,Float64},
 end
 
 # Compute the gradient and Hessian of the (primal) objective.
-function computegradient(L::Array{Float64,2}, x::Array{Float64,1},
-                         eps::Float64)
+function computegrad(L::Array{Float64,2}, x::Array{Float64,1}, eps::Float64)
   n = nrow(L);
   k = ncol(L);
   d = 1./(L*x + eps);
@@ -21,15 +20,15 @@ function computegradient(L::Array{Float64,2}, x::Array{Float64,1},
   return g, H;
 end
 
-# The same as computegradient, but faster, and with more efficient use
-# of memory allocation. Note that it is important to avoid taking the
+# The same as computegrad, but faster, and with more efficient use of
+# memory allocation. Note that it is important to avoid taking the
 # transpose of the (potentially large) matrix L; for example, for
 # computing the gradient, the equivalent code g = -L'*d/n is slower
 # and requires more memory allocations.
-function computegradient!(L::Array{Float64,2}, x::Array{Float64,1},
-                          g::Array{Float64,1}, H::Array{Float64,2},
-                          d::Array{Float64,1}, Ld::Array{Float64,2},
-                          eps::Float64)
+function computegrad!(L::Array{Float64,2}, x::Array{Float64,1},
+                      g::Array{Float64,1}, H::Array{Float64,2},
+                      d::Array{Float64,1}, Ld::Array{Float64,2},
+                      eps::Float64)
   n    = nrow(L);
   k    = ncol(L);
   d[:] = 1./(L*x + eps);
@@ -137,19 +136,14 @@ function mixsqploop!(L::Array{Float64,2}, x::Array{Float64,1},
   for i = 1:maxiter
 
     # COMPUTE GRADIENT AND HESSIAN
-    # This is equivalent to the following code, but faster:
-    #
-    #   g, H = computegradient(L,x,eps)
-    #
-    computegradient!(L,x,g,H,d,Ld,eps);
+    # This is equivalent to g, H = computegrad(L,x,eps), but faster.
+    computegrad!(L,x,g,H,d,Ld,eps);
 
     # CHECK CONVERGENCE
     # Check convergence of outer loop.
     if minimum(g + 1) >= -convtol
       break
     end
-      
-      
   end
 
   return x
