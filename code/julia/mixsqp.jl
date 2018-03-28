@@ -26,19 +26,18 @@ end
 # transpose of the (potentially large) matrix L; for example, for
 # computing the gradient, the equivalent code g = -L'*d/n is slower
 # and requires more memory allocations.
-function computegradientfaster!(L::Array{Float64,2}, x::Array{Float64,1},
-                                g::Array{Float64,1}, H::Array{Float64,2},
-                                d::Array{Float64,1}, I::Array{Float64,2}, 
-                                LD::Array{Float64,2}, eps::Float64)
-  n = nrow(L);
-  k = ncol(L);
+function computegradient!(L::Array{Float64,2}, x::Array{Float64,1},
+                          g::Array{Float64,1}, H::Array{Float64,2},
+                          d::Array{Float64,1}, Ld::Array{Float64,2},
+                          eps::Float64)
+  n    = nrow(L);
+  k    = ncol(L);
   d[:] = 1./(L*x + eps);
-  I[:] = eps*eye(k);
   g[:] = -(d'*L)'/n;
   d[:] = d.^2;
-  transpose!(LD,L);
-  broadcast!(*,LD,d',LD);
-  H[:] = (LD*L)/n + I;
+  transpose!(Ld,L);
+  broadcast!(*,Ld,d',Ld);
+  H[:] = (Ld*L)/n + eps*eye(k);
   return 0
 end
 
@@ -60,8 +59,7 @@ function mixsqploop!(L::Array{Float64,2}, x::Array{Float64,1},
   g  = zeros(k);
   d  = zeros(n);
   H  = zeros(k,k);
-  I  = zeros(k,k);
-  LD = zeros(k,n);
+  Ld = zeros(k,n);
     
   # Repeat until we reach the maximum number if iterations, or until
   # the convergence criterion is met.
@@ -70,7 +68,7 @@ function mixsqploop!(L::Array{Float64,2}, x::Array{Float64,1},
     # COMPUTE GRADIENT AND HESSIAN
     # ----------------------------
     # g, H = computegradient(L,x,eps);
-    computegradientfaster!(L,x,g,H,d,I,LD,eps);
+    computegradient!(L,x,g,H,d,I,Ld,eps);
   end
 
   return g, H
