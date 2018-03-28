@@ -41,9 +41,80 @@ function computegradient!(L::Array{Float64,2}, x::Array{Float64,1},
   return 0
 end
 
+# TO DO: Explain here what this function does, and how to use it.
+# ind = working set
+function solveqp (ind::Array{Int,1}, g::Array{Float64,1}, H::Array{Float64,2},
+                  maxiter::Int, tol::Float64)
+
+  # Set the initial guess.
+  k      = length(g);
+  x      = zeros(k);
+  x[ind] = 1/k;
+
+  # Repeat until the convergence criterion is met, or until we reach
+  # the maximum number of iterations.
+  for i = 1:maxiter
+
+    # Define the quadratic program.
+    s  = length(ind);
+    Hs = H[ind,ind];
+    d  = H*x + 2*g + 1;
+    ds = d[ind];
+
+    # Compute the search direction.
+    ps     = -Hs \ ds;
+    p      = zeros(k);
+    p[ind] = ps;
+
+    # Check convergence using the KKT conditions.
+    if norm(p_s) < tol
+            
+      # Compute the Lagrange multiplier.
+      lambda = d - minimum(ds);
+      if all(lambda .>= 0)
+        break
+      else
+          
+        # Add to the active set the entry corresponding to the
+        # smallest (or largest?) Lagrange multiplier.
+        r, j = findmin(lambda);
+        ind  = sort([ind; j]);
+      end
+    else
+
+      # Move to the new "inner loop" iterate (y) along the search
+      # direction.
+##         y = y + alpha * p;
+        end
+  end
+end
+
+##         # Find a feasible step length.
+##         alpha     = 1;
+##         alpha0    = -y[ind]./p_s;
+##         ind_block = find(p_s .< 0);
+##         alpha0    = alpha0[ind_block];
+##         if ~isempty(ind_block)
+##           v, t = findmin(alpha0);
+##           if v < 1
+
+##             # Blocking constraint.
+##             ind_block = ind[ind_block[t]]; 
+##             alpha     = v;
+              
+##             # Update working set if there is a blocking constraint.
+##             deleteat!(ind,find(ind - ind_block .== 0));
+##           end
+##         end
+          
+##       end
+##     end
+
+
 # This function implements the main loop of mixsqp.
 function mixsqploop!(L::Array{Float64,2}, x::Array{Float64,1},
-                     maxiter::Int, eps::Float64, verbose::Bool)
+                     maxiter::Int, maxqpiter::Int, convtol::Float64,
+                     sptol::Float64, eps::Float64, verbose::Bool)
 
   # Get the number of rows (n) and columns (k) of the likelihood
   # matrix.
@@ -66,30 +137,32 @@ function mixsqploop!(L::Array{Float64,2}, x::Array{Float64,1},
   for i = 1:maxiter
 
     # COMPUTE GRADIENT AND HESSIAN
-    # ----------------------------
-    # g, H = computegradient(L,x,eps);
+    # This is equivalent to the following code, but faster:
+    #
+    #   g, H = computegradient(L,x,eps)
+    #
     computegradient!(L,x,g,H,d,I,Ld,eps);
+
+    # CHECK CONVERGENCE
+    # Check convergence of outer loop.
+    if minimum(g + 1) >= -convtol
+      break
+    end
+      
+      
   end
 
-  return g, H
+  return x
 end
 
 # TO DO: Add comments here explaining what this function does, and
 # what are the inputs and outputs.
-#
-# L       : likelihood matrix; design matrix of size n by m
-# x       : initial point with default (1/m, 1/m, ...)
-# convtol :
-# 
 function mixsqp(L::Array{Float64,2},
                 x::Array{Float64,1} = ones(ncol(L))/ncol(L);
                 lowrankapprox = "svd", maxiter::Int = 1000,
-                factol::Float64 = 1e-15, eps::Float64 = 1e-15,
-                verbose::Bool = true)
-
-                #, convtol = 1e-8,
-                #pqrtol = 1e-8, sptol = 1e-3,
-                # maxqpiter = 100)
+                maxqpiter::Int = 100, convtol::Float64 = 1e-8,
+                sptol::Float64 = 1e-6, factol::Float64 = 1e-15,
+                eps::Float64 = 1e-15, verbose::Bool = true)
     
   # Get the number of rows (n) and columns (k) of the likelihood
   # matrix.
@@ -144,7 +217,7 @@ function mixsqp(L::Array{Float64,2},
       @printf "Computing partial QR factorization.\n"
     end
     F = pqrfact(L,rtol = factol);
-    P = convert(SparseMatrixCSC{Float64,Int64},F[:P]);
+    P = convert(SparseMatrixCSC{Float64,Int},F[:P]);
   elseif lowrankapprox == "svd"
     if verbose
       @printf "Computing partial SVD factorization.\n"
@@ -178,7 +251,8 @@ function mixsqp(L::Array{Float64,2},
     @printf "Running SQP algorithm.\n"
   end
   x, loop_elapsed, loop_bytes, gctime,
-  memallocs = @timed mixsqploop!(L,x,maxiter,eps,verbose);
+  memallocs = @timed mixsqploop!(L,x,maxiter,maxqpiter,convtol,sptol,
+                                 eps,verbose);
   @printf(" - Optimization took %0.4f seconds (allocation: %0.2f MiB)\n",
             loop_elapsed,loop_bytes/1024^2);
 
@@ -203,9 +277,6 @@ end
 ##   # QP subproblem start.
 ##   for i = 1:maxiter
 
-##     # Start timing the iteration.
-##     tic();
-      
 ##     # Compute the gradient and Hessian, optionally using the partial
 ##     # QR decomposition to increase the speed of these computations.
 ##     # gradient and Hessian computation -- Rank reduction method
@@ -217,10 +288,6 @@ end
 ##         D = 1./(F[:U]*(S*(F[:Vt]*x)) + eps);
 ##         g = -F[:Vt]'*(S * (F[:U]'*D))/n;
 ##         H = (F[:V]*S*(F[:U]'*Diagonal(D.^2)*F[:U])* S*F[:Vt])/n + eps * eye(k);
-##     else
-##         D = 1./(L*x + eps);
-##         g = -L'*D/n;
-##         H = L'*Diagonal(D.^2)*L/n + eps * eye(k);
 ##     end
 
 ##     # Report on the algorithm's progress.
@@ -241,74 +308,10 @@ end
 ##       @printf("%4d %0.8e %+0.2e %4d %3d\n",i,obj[i],-gmin[i],nnz[i],j);
 ##     end
       
-##     # Check convergence of outer loop
-##     if minimum(g + 1) >= -convtol
-##       break
-##     end
-      
-##     # Initialize the solution to the QP subproblem (y).
-##     ind    = find(x .> sptol);
-##     y      = sparse(zeros(k));
-##     y[ind] = 1/length(ind);
-
-##     # Run active set method to solve the QP subproblem.
-##     for j = 1:maxqpiter
-          
-##       # Define the smaller QP subproblem.
-##       s   = length(ind);
-##       H_s = H[ind,ind];
-##       d   = H*y + 2*g + 1;
-##       d_s = d[ind];
-
-##       # Solve the smaller problem.
-##       p      = sparse(zeros(k));
-##       p_s    = -H_s\d_s;
-##       p[ind] = p_s;
-
-##       # Check convergence using KKT
-##       if norm(p_s) < convtol
-            
-##         # Compute the Lagrange multiplier.
-##         lambda = d - minimum(d_s);
-##         if all(lambda .>= 0)
-##           break;
-##         else
-            
-##           # TO DO: Explain what ind and ind_min are for.
-##           ind_min = findmin(lambda)[2];
-##           ind     = sort([ind; ind_min]);
-##         end
-##       else
-          
-##         # Find a feasible step length.
-##         alpha     = 1;
-##         alpha0    = -y[ind]./p_s;
-##         ind_block = find(p_s .< 0);
-##         alpha0    = alpha0[ind_block];
-##         if ~isempty(ind_block)
-##           v, t = findmin(alpha0);
-##           if v < 1
-
-##             # Blocking constraint.
-##             ind_block = ind[ind_block[t]]; 
-##             alpha     = v;
-              
-##             # Update working set if there is a blocking constraint.
-##             deleteat!(ind,find(ind - ind_block .== 0));
-##           end
-##         end
-          
-##         # Move to the new "inner loop" iterate (y) along the search
-##         # direction.
-##         y = y + alpha * p;
-##       end
-##     end
 
 ##     # Update the solution to the original optimization problem.
 ##     x = y;
 
-##     # Get the elapsed time for the ith iteration.
-##     timing[i] = toq();
 ##   end
 
 ##   # Return: (1) the solution (after zeroing out any values below the

@@ -15,39 +15,8 @@ function mixSQP_time(L; eps=1e-8, tol=1e-8, pqrtol = 1e-10, sptol=1e-3,
         D = 1./(F[:U]*(S*(F[:Vt]*x)) + eps);
         g = -F[:Vt]'*(S * (F[:U]'*D))/n;
         H = (F[:V]*S*(F[:U]'*Diagonal(D.^2)*F[:U])* S*F[:Vt])/n + eps * eye(k);
-    else
-        D = 1./(L*x + eps);
-        g = -L'*D/n;
-        H = L'*Diagonal(D.^2)*L/n + eps * eye(k);
     end
         
-    # initialize
-    ind = find(x .> sptol);
-    y = sparse(zeros(k)); y[ind] = 1/length(ind);
-
-    # Active set method start
-    for j = 1:100
-      # define smaller problem
-      s = length(ind);
-      H_s = H[ind,ind];
-      d = H * y + 2 * g + 1;
-      d_s = d[ind];
-
-      # solve smaller problem
-      p = sparse(zeros(k));
-      p_s = -H_s\d_s; p[ind] = p_s;
-
-      # convergence check
-      if norm(p_s) < tol
-        # compute the Lagrange multiplier
-        lambda = d - minimum(d_s);
-        # convergence test
-        if minimum(lambda) >= 0;
-          break;
-        else
-          ind_min = findmin(lambda)[2];
-          ind = sort([ind;ind_min]);
-        end
 
       # do update otherwise
       else
