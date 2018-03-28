@@ -1,28 +1,19 @@
-# A small example I am using for testing.
-
 # Load a few packages.
-using Distributions
 using LowRankApprox
 using RCall
 
 # Load some function definitions.
 include("misc.jl");
-include("datasim.jl");
-include("likelihood.jl");
 include("mixem.jl");
-include("mixsqp.jl");
 include("rebayes.jl");
+include("mixSQP_old.jl");
 
-# Initialize the pseudorandom number generator.
+e = 0.01;
+L = [ 1.0   e   e
+      1.0 1.0 1.0
+      1.0 1.0 1.0 ];
+
 srand(1);
-
-# Generate a data set with 50,000 samples.
-@printf "Generating data set.\n"
-x = normtmixdatasim(round(Int,5e4));
-
-# Compute the 50,000 x 20 likelihood matrix.
-sd = autoselectmixsd(x,nv = 20);
-L  = normlikmatrix(x,sd = sd);
 
 # Fix the mixture model using EM.
 @printf "Fitting mixture model using EM.\n"
@@ -36,4 +27,4 @@ println(status);
 
 # Fit the mixture model using the SQP algorithm.
 @printf "Fitting mixture model using mixSQP.\n"
-@time out = mixsqp(L,maxiter = 100);
+@time out = mixSQP(L,lowrank = "nothing");

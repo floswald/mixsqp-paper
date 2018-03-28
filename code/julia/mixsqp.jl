@@ -43,8 +43,8 @@ end
 
 # TO DO: Explain here what this function does, and how to use it.
 # ind = working set
-function solveqp (ind::Array{Int,1}, g::Array{Float64,1}, H::Array{Float64,2},
-                  maxiter::Int, tol::Float64)
+function solveqp(ind::Array{Int,1}, g::Array{Float64,1}, H::Array{Float64,2},
+                 maxiter::Int, tol::Float64)
 
   # Set the initial guess.
   k      = length(g);
@@ -141,7 +141,7 @@ function mixsqploop!(L::Array{Float64,2}, x::Array{Float64,1},
     #
     #   g, H = computegradient(L,x,eps)
     #
-    computegradient!(L,x,g,H,d,I,Ld,eps);
+    computegradient!(L,x,g,H,d,Ld,eps);
 
     # CHECK CONVERGENCE
     # Check convergence of outer loop.

@@ -17,7 +17,11 @@ function mixem(L::Array{Float64,2},
   n = nrow(L);
   k = ncol(L);
 
-  # Check input matrix "L". All the entries should be positive.
+  # Check input matrix "L". All the entries should be positive, and it
+  # should have at least 2 columns.
+  if (k < 2)
+    throw(ArgumentError("Argument \"L\" should have at least 2 columns"));
+  end
   if any(L .<= 0)
     throw(ArgumentError("All entries of matrix \"L\" should be positive"));
   end
