@@ -167,7 +167,6 @@ function mixsqploop(L::Array{Float64,2}, F, x::Array{Float64,1},
     # COMPUTE GRADIENT AND HESSIAN
     if lowrankapprox == "qr"
       # The same as g, H = computegradqr(F,P,x,eps), but faster.
-      # g, H = computegradqr(F,P,Rp,x,eps)
       computegradqr!(F,P,Rp,x,g,H,d,Qd,Qdt,eps);
     elseif lowrankapprox == "svd"
     else
