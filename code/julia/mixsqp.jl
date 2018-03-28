@@ -1,15 +1,3 @@
-# Reconstruct the matrix from the partial QR decomposition.
-function reconstructmatrixqr(F::LowRankApprox.PartialQR{Float64},
-                             P::SparseMatrixCSC{Float64,Int})
-  return F[:Q] * (F[:R] * P')
-end
-
-# Reconstruct the matrix from the partial SVD factorization.
-function reconstructmatrixsvd(F::LowRankApprox.PartialSVD{Float64,Float64},
-                              S::Diagonal{Float64})
-  return F[:U] * (S * F[:Vt])
-end
-
 # Compute the gradient and Hessian of the (primal) objective.
 function computegrad(L::Array{Float64,2}, x::Array{Float64,1}, eps::Float64)
   n = nrow(L);
@@ -17,7 +5,21 @@ function computegrad(L::Array{Float64,2}, x::Array{Float64,1}, eps::Float64)
   d = 1./(L*x + eps);
   g = -L'*d/n;
   H = L'*Diagonal(d.^2)*L/n + eps*eye(k);    
-  return g, H;
+  return g, H
+end
+
+# Compute the approximate gradient and Hessian using the QR
+# factorization of the likelihood matrix.
+function computegradqr(F::LowRankApprox.PartialQR{Float64},
+                       P::SparseMatrixCSC{Float64,Int}, Rp::Array{Float64,2},
+                       x::Array{Float64,1}, eps::Float64)
+  n  = size(F,1);
+  k  = size(F,2);
+  d  = 1./(F[:Q]*(Rp*x) + eps);
+  g  = -Rp'*(F[:Q]'*d)/n;
+  Qd = d .* F[:Q];
+  H  = Rp'*(Qd'*Qd)*Rp/n + eps*eye(k);
+  return g, H
 end
 
 # The same as computegrad, but faster, and with more efficient use of
@@ -28,15 +30,32 @@ end
 function computegrad!(L::Array{Float64,2}, x::Array{Float64,1},
                       g::Array{Float64,1}, H::Array{Float64,2},
                       d::Array{Float64,1}, Ld::Array{Float64,2},
-                      eps::Float64)
+                      Ldt::Array{Float64,2}, eps::Float64)
   n    = nrow(L);
   k    = ncol(L);
   d[:] = 1./(L*x + eps);
   g[:] = -(d'*L)'/n;
-  d[:] = d.^2;
-  transpose!(Ld,L);
-  broadcast!(*,Ld,d',Ld);
-  H[:] = (Ld*L)/n + eps*eye(k);
+  broadcast!(*,Ld,L,d);
+  transpose!(Ldt,Ld);
+  H[:] = (Ldt*Ld)/n + eps*eye(k);
+  return 0
+end
+
+# Same as computegradqr, but faster, and avoids memory allocation as
+# much as possible.
+function computegradqr!(F::LowRankApprox.PartialQR{Float64},
+                        P::SparseMatrixCSC{Float64,Int},
+                        Rp::Array{Float64,2}, x::Array{Float64,1},
+                        g::Array{Float64,1}, H::Array{Float64,2},
+                        d::Array{Float64,1}, Qd::Array{Float64,2},
+                        Qdt::Array{Float64,2}, eps::Float64)
+  n    = size(F,1);
+  k    = size(F,2);
+  d[:] = 1./(F[:Q]*(Rp*x) + eps);
+  g[:] = -((d'*F[:Q])*Rp)/n;
+  broadcast!(*,Qd,F[:Q],d);
+  transpose!(Qdt,Qd);
+  H[:] = Rp'*(Qdt*Qd)*(Rp/n) + eps*eye(k);
   return 0
 end
 
@@ -109,11 +128,11 @@ end
 ##       end
 ##     end
 
-
 # This function implements the main loop of mixsqp.
-function mixsqploop!(L::Array{Float64,2}, x::Array{Float64,1},
-                     maxiter::Int, maxqpiter::Int, convtol::Float64,
-                     sptol::Float64, eps::Float64, verbose::Bool)
+function mixsqploop(L::Array{Float64,2}, F, x::Array{Float64,1}, 
+                    lowrankapprox::String, maxiter::Int, maxqpiter::Int,
+                    convtol::Float64, sptol::Float64, eps::Float64,
+                    verbose::Bool)
 
   # Get the number of rows (n) and columns (k) of the likelihood
   # matrix.
@@ -126,19 +145,36 @@ function mixsqploop!(L::Array{Float64,2}, x::Array{Float64,1},
 
   # Preallocate memory for additional quantities computed inside the
   # loop.
-  g  = zeros(k);
-  d  = zeros(n);
-  H  = zeros(k,k);
-  Ld = zeros(k,n);
+  g = zeros(k);
+  d = zeros(n);
+  H = zeros(k,k);
+  if lowrankapprox == "qr"
+    k1  = ncol(F[:Q]);
+    P   = convert(SparseMatrixCSC{Float64,Int},F[:P]);
+    Rp  = full(F[:R] * P');
+    Qd  = zeros(n,k1);
+    Qdt = zeros(k1,n);
+  elseif lowrankapprox == "none"
+    S   = Diagonal(F[:S]);
+    Ld  = zeros(n,k);
+    Ldt = zeros(k,n);
+  end
     
   # Repeat until we reach the maximum number if iterations, or until
   # the convergence criterion is met.
   for i = 1:maxiter
 
     # COMPUTE GRADIENT AND HESSIAN
-    # This is equivalent to g, H = computegrad(L,x,eps), but faster.
-    computegrad!(L,x,g,H,d,Ld,eps);
-
+    if lowrankapprox == "qr"
+      # The same as g, H = computegradqr(F,P,x,eps), but faster.
+      # g, H = computegradqr(F,P,Rp,x,eps)
+      computegradqr!(F,P,Rp,x,g,H,d,Qd,Qdt,eps);
+    elseif lowrankapprox == "svd"
+    else
+      # The same as g, H = computegrad(L,x,eps), but faster.
+      computegrad!(L,x,g,H,d,Ld,Ldt,eps);
+    end
+      
     # CHECK CONVERGENCE
     # Check convergence of outer loop.
     if minimum(g + 1) >= -convtol
@@ -146,14 +182,14 @@ function mixsqploop!(L::Array{Float64,2}, x::Array{Float64,1},
     end
   end
 
-  return x
+  return g, H
 end
 
 # TO DO: Add comments here explaining what this function does, and
 # what are the inputs and outputs.
 function mixsqp(L::Array{Float64,2},
                 x::Array{Float64,1} = ones(ncol(L))/ncol(L);
-                lowrankapprox = "svd", maxiter::Int = 1000,
+                lowrankapprox::String = "svd", maxiter::Int = 1000,
                 maxqpiter::Int = 100, convtol::Float64 = 1e-8,
                 sptol::Float64 = 1e-6, factol::Float64 = 1e-15,
                 eps::Float64 = 1e-15, verbose::Bool = true)
@@ -191,10 +227,10 @@ function mixsqp(L::Array{Float64,2},
     @printf "Running SQP algorithm with the following settings:\n"
     @printf " - %d x %d data matrix\n" n k
     if lowrankapprox == "qr"
-      @printf " - Using SVD approximation with "
+      @printf " - Using QR approximation with "
       @printf "%0.2e error tolerance\n" factol
     elseif lowrankapprox == "svd"
-      @printf " - Using QR approximation with "
+      @printf " - Using SVD approximation with "
       @printf "%0.2e error tolerance\n" factol
     end
     @printf " - maximum number of iterations = %d\n" maxiter
@@ -205,19 +241,18 @@ function mixsqp(L::Array{Float64,2},
   # If requested, compute a partial QR or partial SVD factorization of
   # the likelihood matrix using the LowRankApprox package. For
   # details, see https://github.com/klho/LowRankApprox.jl.
+  F = [];
   out, fac_elapsed, fac_bytes, gctime,
   memallocs = @timed if lowrankapprox == "qr"
     if verbose
       @printf "Computing partial QR factorization.\n"
     end
     F = pqrfact(L,rtol = factol);
-    P = convert(SparseMatrixCSC{Float64,Int},F[:P]);
   elseif lowrankapprox == "svd"
     if verbose
       @printf "Computing partial SVD factorization.\n"
     end
     F = psvdfact(L,rtol = factol);
-    S = Diagonal(F[:S]);
   end
 
   # Report accuracy and computational expense of factorization.
@@ -225,17 +260,10 @@ function mixsqp(L::Array{Float64,2},
     @printf(" - Factorization took %0.4f seconds (allocation: %0.2f MiB)\n",
             fac_elapsed,fac_bytes/1024^2);
     if lowrankapprox != "none"
-      if lowrankapprox == "qr"
-        @printf(" - Min. value in partial QR approx. = %0.2e\n",
-                minimum(reconstructmatrixqr(F,P)));
-        @printf(" - Max. error in partial QR approx. = %0.2e\n",
-                maximum(abs.(reconstructmatrixqr(F,P) - L)));
-      elseif lowrankapprox == "svd"
-        @printf(" - Min. value in partial SVD approx. = %0.2e\n",
-                minimum(reconstructmatrixsvd(F,S)));
-        @printf(" - Max. error in partial SVD approx. = %0.2e\n",
-                maximum(abs.(reconstructmatrixsvd(F,S) - L)));
-      end
+      @printf(" - Min. value in matrix reconstruction = %0.2e\n",
+              minimum(full(F)));
+      @printf(" - Max. error in matrix reconstruction = %0.2e\n",
+              maximum(abs.(full(F) - L)));
     end
   end
 
@@ -245,8 +273,8 @@ function mixsqp(L::Array{Float64,2},
     @printf "Running SQP algorithm.\n"
   end
   x, loop_elapsed, loop_bytes, gctime,
-  memallocs = @timed mixsqploop!(L,x,maxiter,maxqpiter,convtol,sptol,
-                                 eps,verbose);
+  memallocs = @timed mixsqploop(L,F,x,lowrankapprox,maxiter,maxqpiter,
+                                convtol,sptol,eps,verbose);
   @printf(" - Optimization took %0.4f seconds (allocation: %0.2f MiB)\n",
             loop_elapsed,loop_bytes/1024^2);
 

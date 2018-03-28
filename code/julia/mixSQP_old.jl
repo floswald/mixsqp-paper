@@ -78,7 +78,8 @@ function mixSQP(L; x = ones(size(L,2))/size(L,2), convtol = 1e-8,
     if lowrank == "qr"
         D = 1./(F[:Q]*(F[:R]*(P'*x)) + eps);
         g = -P * F[:R]' * (F[:Q]'*D)/n;
-        H = P * F[:R]' * (F[:Q]'*Diagonal(D.^2)*F[:Q]) * F[:R] * P'/n + eps * eye(k);
+        H = P * F[:R]' * (F[:Q]'*Diagonal(D.^2)*F[:Q]) * F[:R] * P'/n +
+            eps * eye(k);
     elseif lowrank == "svd"
         D = 1./(F[:U]*(S*(F[:Vt]*x)) + eps);
         g = -F[:Vt]'*(S * (F[:U]'*D))/n;

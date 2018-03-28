@@ -37,3 +37,4 @@ println(status);
 # Fit the mixture model using the SQP algorithm.
 @printf "Fitting mixture model using mixSQP.\n"
 @time out = mixsqp(L,maxiter = 100);
+@time out = mixsqp(L,lowrankapprox = "qr",maxiter = 100);
