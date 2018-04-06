@@ -1,3 +1,5 @@
+# NOTE: This uses a modified version of the REBayes package in which
+# KWDual also outputs the MOSEK problem specification (P).
 library(REBayes)
 library(Rmosek)
 source("mixem.R")
@@ -24,9 +26,7 @@ x   <- out$f
 # Write the MOSEK problem specification to file.
 r <- mosek_write(P,"P1.mps",opts = list(scofile = "P1.sco",verbose = 0))
 
-# It is easy to see that the MOSEK solution is not optimal when we
-# compare to the value of the objective at the MOSEK and EM solutions
-# Compute the value of the (primal) objective at the MOSEK solution.
+# In this first example, the MOSEK and EM solutions are equally good.
 cat(sprintf("Objective value at IP solution: %0.8f\n",-sum(log(A %*% x))))
 cat(sprintf("Objective value at EM solution: %0.8f\n",-sum(log(A %*% xem))))
 
@@ -48,10 +48,10 @@ out <- KWDual(A,rep(1,k),rep(1,n)/n)
 x   <- out$f
 
 # Write the MOSEK problem specification to file.
-r <- mosek_write(P,"P1.mps",opts = list(scofile = "P1.sco",verbose = 0))
+r <- mosek_write(P,"P2.mps",opts = list(scofile = "P2.sco",verbose = 0))
 
-# It is easy to see that the MOSEK solution is not optimal when we
-# compare to the value of the objective at the MOSEK and EM solutions
-# Compute the value of the (primal) objective at the MOSEK solution.
+# In this second example, it is easy to see that the MOSEK solution is
+# not optimal when we compare against the value of the objective at the
+# EM solution.
 cat(sprintf("Objective value at IP solution: %0.8f\n",-sum(log(A %*% x))))
 cat(sprintf("Objective value at EM solution: %0.8f\n",-sum(log(A %*% xem))))
