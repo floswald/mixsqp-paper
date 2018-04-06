@@ -22,9 +22,10 @@ xem <- mixem(A,tol = 1e-8)
 # interior-point method (MOSEK).
 out <- KWDual(A,rep(1,k),rep(1,n)/n)
 x   <- out$f
+P1  <- out$P
 
 # Write the MOSEK problem specification to file.
-r <- mosek_write(P,"P1.mps",opts = list(scofile = "P1.sco",verbose = 0))
+r <- mosek_write(P1,"P1.mps",opts = list(scofile = "P1.sco",verbose = 0))
 
 # In this first example, the MOSEK and EM solutions are equally good.
 cat(sprintf("Objective value at IP solution: %0.8f\n",-sum(log(A %*% x))))
@@ -46,9 +47,10 @@ xem <- mixem(A,tol = 1e-8)
 # interior-point method (MOSEK).
 out <- KWDual(A,rep(1,k),rep(1,n)/n)
 x   <- out$f
+P2  <- out$P
 
 # Write the MOSEK problem specification to file.
-r <- mosek_write(P,"P2.mps",opts = list(scofile = "P2.sco",verbose = 0))
+r <- mosek_write(P2,"P2.mps",opts = list(scofile = "P2.sco",verbose = 0))
 
 # In this second example, it is easy to see that the MOSEK solution is
 # not optimal when we compare against the value of the objective at the
