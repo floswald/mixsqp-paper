@@ -1,7 +1,39 @@
 library(REBayes)
+library(Rmosek)
 source("mixem.R")
 
+# FIRST EXAMPLE
+# -------------
 # Construct the likelihood matrix.
+cat("FIRST EXAMPLE\n")
+n <- 3
+k <- 3
+e <- 0.5
+A <- rbind(c(1,e,e),
+           c(e,e,0.9),
+           c(e,1,e))
+
+# Fit the mixture model using EM.
+xem <- mixem(A,tol = 1e-8)
+
+# Fit the mixture model by solving the dual problem using an
+# interior-point method (MOSEK).
+out <- KWDual(A,rep(1,k),rep(1,n)/n)
+x   <- out$f
+
+# Write the MOSEK problem specification to file.
+r <- mosek_write(P,"P1.mps",opts = list(scofile = "P1.sco",verbose = 0))
+
+# It is easy to see that the MOSEK solution is not optimal when we
+# compare to the value of the objective at the MOSEK and EM solutions
+# Compute the value of the (primal) objective at the MOSEK solution.
+cat(sprintf("Objective value at IP solution: %0.8f\n",-sum(log(A %*% x))))
+cat(sprintf("Objective value at EM solution: %0.8f\n",-sum(log(A %*% xem))))
+
+# SECOND EXAMPLE
+# --------------
+# Construct the likelihood matrix.
+cat("SECOND EXAMPLE\n")
 e <- 0.5
 A <- rbind(c(1,e,e),
            c(e,1,e),
@@ -12,17 +44,14 @@ xem <- mixem(A,tol = 1e-8)
 
 # Fit the mixture model by solving the dual problem using an
 # interior-point method (MOSEK).
-n   <- nrow(A)
-k   <- ncol(A)
 out <- KWDual(A,rep(1,k),rep(1,n)/n)
 x   <- out$f
 
-# Compute the value of the (primal) objective at the MOSEK solution.
-cat("Objective value at IP solution:\n")
-print(-sum(log(A %*% x)),digits = 12)
+# Write the MOSEK problem specification to file.
+r <- mosek_write(P,"P1.mps",opts = list(scofile = "P1.sco",verbose = 0))
 
 # It is easy to see that the MOSEK solution is not optimal when we
-# compare to the quality of the EM solution:
-cat("Objective value at EM solution:\n")
-print(-sum(log(A %*% xem)),digits = 12)
-
+# compare to the value of the objective at the MOSEK and EM solutions
+# Compute the value of the (primal) objective at the MOSEK solution.
+cat(sprintf("Objective value at IP solution: %0.8f\n",-sum(log(A %*% x))))
+cat(sprintf("Objective value at EM solution: %0.8f\n",-sum(log(A %*% xem))))
